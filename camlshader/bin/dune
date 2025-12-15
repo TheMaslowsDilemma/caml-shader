@@ -1,0 +1,4 @@
+(executable
+ (public_name camlshader)
+ (name main)
+ (libraries metal tsdl camlshader))
