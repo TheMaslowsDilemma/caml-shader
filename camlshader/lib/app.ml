@@ -44,7 +44,8 @@ let handle_event state event =
 	  let x = get event mouse_motion_x in
 	  let y = get event mouse_motion_y in
 	  state.sdls.mouse := (x, y); (* i think this usage of ref is okay *)
-	  state
+	  let gpus = Metal_utils.incr_tk state.gpus in
+	  { state with gpus }
   | `Window_event -> (
 		let eid = get event window_event_id in
 	  match window_event_enum eid with

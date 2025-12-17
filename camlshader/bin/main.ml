@@ -5,13 +5,15 @@ let event = Sdl.Event.create ()
 
 let rec loop state =
   if not state.App.running then ()
-  else if Sdl.poll_event (Some event) then loop (App.handle_event state event)
   else begin
-    let pxls, pitch =
-      Metal_utils.run_compute_pipeline state.gpus state.shaders.active
-    in
-    Sdl_utils.render_texture state.sdls pxls pitch;
-    loop state
+    if Sdl.poll_event (Some event) then loop (App.handle_event state event)
+    else begin
+      let pxls, pitch =
+        Metal_utils.run_compute_pipeline state.gpus state.shaders.active
+      in
+      Sdl_utils.render_texture state.sdls pxls pitch;
+      loop state
+    end
   end
 
 let () =
