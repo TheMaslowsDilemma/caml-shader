@@ -7,7 +7,7 @@ the app need to have some interactivity. two forms of input
 come to mind: basic input and scene input. the basics are
 `mouse (x,y)` and `time t`. the scene would be more complex
 objects like 3d points and can wait.
-
+git 
 the other thing to explore is how to form building blocks
 that can be parsed into metal shader language. this would
 include both the inputs to shaders and its behavior. the
