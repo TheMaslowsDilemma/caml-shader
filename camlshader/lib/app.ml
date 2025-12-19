@@ -1,7 +1,7 @@
 type app_state = {
   sdls : Sdl_utils.sdl_state;
-  shaders : Shader_utils.shader_library_state;
   gpus : Metal_utils.gpu_state;
+  shaders : Shader_utils.shader_library_state;
   running : bool;
 }
 
@@ -46,7 +46,7 @@ let handle_event state event =
       let y = get event mouse_motion_y in
       state.sdls.mouse := (x, y);
       (* i think this usage of ref is okay *)
-      let gpus = Metal_utils.incr_tk state.gpus in
+      let gpus = Metal_utils.update_mouse_buff state.gpus x y in
       { state with gpus }
   | `Window_event -> (
       let eid = get event window_event_id in

@@ -6,9 +6,9 @@ type pixel = int * int * int * int
 type gpu_state = {
   w : int;
   h : int;
-  tk : int;
   pxl_buff : Buffer.t;
   dim_buff : Buffer.t;
+  mouse_buff : Buffer.t;
   devc : Device.t;
   cmdq : CommandQueue.t;
 }
@@ -24,35 +24,54 @@ let build_command_queue device = CommandQueue.on_device device
 
 let set_i32 bptr x pos = bptr +@ pos <-@ Signed.Int32.of_int x
 
-let set_i32_xyz buffer x y z =
+let set_i32_xy buffer x y =
   let bptr = Buffer.contents buffer |> coerce (ptr void) (ptr int32_t) in
   set_i32 bptr x 0;
   set_i32 bptr y 1;
-  set_i32 bptr z 2;
   buffer
 
 let build_pxl_buff devc w h =
   Buffer.on_device devc ~length:(w * h * 4) ResourceOptions.storage_mode_shared
 
-let build_dim_buff devc w h tk =
+let build_dim_buff devc w h =
   let buffer =
     Buffer.on_device devc
-      ~length:(sizeof uint32_t * 3)
+      ~length:(sizeof uint32_t * 2)
       ResourceOptions.storage_mode_shared
   in
-  set_i32_xyz buffer w h tk
+  set_i32_xy buffer w h
+;;
+
+let build_mouse_buff devc x y =
+  let buffer =
+  Buffer.on_device devc
+    ~length:(sizeof uint32_t * 2)
+    ResourceOptions.storage_mode_shared
+  in
+  set_i32_xy buffer x y
+;;
+
+let update_mouse_buff state x y =
+  let bptr = Buffer.contents state.mouse_buff |> coerce (ptr void) (ptr int32_t) in
+  set_i32 bptr x 0;
+  set_i32 bptr y 1;
+  { state with mouse_buff=state.mouse_buff }
+;;
 
 let build_gpu_state w h =
   let devc = build_default_device () in
   let cmdq = build_command_queue devc in
   let pxl_buff = build_pxl_buff devc w h in
-  let dim_buff = build_dim_buff devc w h 0 in
-  { w; h; tk = 0; devc; cmdq; pxl_buff; dim_buff }
+  let dim_buff = build_dim_buff devc w h in
+  let mouse_buff = build_mouse_buff devc 0 0 in
+  { w; h; devc; cmdq; pxl_buff; dim_buff; mouse_buff }
+;;
 
 let resize_state_buffers state w h =
   let pxl_buff = build_pxl_buff state.devc w h in
-  let dim_buff = build_dim_buff state.devc w h 0 in
-  { state with w; h; tk = 0; pxl_buff; dim_buff }
+  let dim_buff = build_dim_buff state.devc w h in
+  { state with w; h; pxl_buff; dim_buff }
+;;
 
 (* Creates a big array from Metal Buffer of uchar4 *)
 let bigarray_of_uchar4 pixel_buffer w h =
@@ -61,8 +80,7 @@ let bigarray_of_uchar4 pixel_buffer w h =
   let count = w * h * elmsize in
   let pxls_ptr = Buffer.contents pixel_buffer |> coerce (ptr void) (ptr char) in
   bigarray_of_ptr Ctypes.array1 count Bigarray.Char pxls_ptr
-
-let incr_tk state = { state with tk = state.tk + 1 }
+;;
 
 (***
   Encodes a new command buffer with state details
@@ -73,15 +91,10 @@ let run_compute_pipeline state pipeline =
   let cmd_buff = CommandBuffer.on_queue state.cmdq in
   let cmp_encr = ComputeCommandEncoder.on_buffer cmd_buff in
 
-  (*** TODO: move this hack ***)
-  let bptr =
-    Buffer.contents state.dim_buff |> coerce (ptr void) (ptr int32_t)
-  in
-  set_i32 bptr state.tk 2;
-
   ComputeCommandEncoder.set_compute_pipeline_state cmp_encr pipeline;
   ComputeCommandEncoder.set_buffer cmp_encr state.pxl_buff ~index:0;
   ComputeCommandEncoder.set_buffer cmp_encr state.dim_buff ~index:1;
+  ComputeCommandEncoder.set_buffer cmp_encr state.mouse_buff ~index:2;
 
   let w_group = 16 in
   let h_group = 16 in
