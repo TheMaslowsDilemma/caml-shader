@@ -4,15 +4,15 @@ open Tsdl
 let event = Sdl.Event.create ()
 
 let rec loop state =
-  if not state.App.running then ()
+  if not state.App_utils.running then ()
   else begin
-    if Sdl.poll_event (Some event) then loop (App.handle_event state event)
+    if Sdl.poll_event (Some event) then loop App.( apply_step (handle_event state event) )
     else begin
       let pxls, pitch =
         Metal_utils.run_compute_pipeline state.gpus state.shaders.active
       in
       Sdl_utils.render_texture state.sdls pxls pitch;
-      loop state
+      loop (App.apply_step state)
     end
   end
 

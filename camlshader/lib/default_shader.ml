@@ -33,23 +33,39 @@ float smin(float a, float b, float k)
     return a + x / ( 1.0 - exp2(x/k));
 }
 
+float smoothstep( float x )
+{
+  return x*x*x/(3.0*x*x-3.0*x+1.0);
+}
+
+float3 modk(float3 p, int k) {
+    float prec = 1024;
+    int kprec = k * prec;
+    float3 res = p * prec;
+    res.x = float(int(res.x) % kprec) / prec;
+    res.y = float(int(res.y) % kprec) / prec;
+    res.z = float(int(res.z) % kprec) / prec;
+    return res;
+}
+
 float map(float3 p) {
     // --- 1. SETTINGS / POSITIONS ---
     // Ground
+
     float3 groundPos  = float3(0, 2, 8);
-    float3 groundSize = float3(10, 0.4, 10);
+    float3 groundSize = float3(30, 0, 30);
     
     // Cube Person (Body)
-    float3 bodyPos    = float3(0, 1, 4); // Slightly above ground
-    float3 bodySize   = float3(0.4, 0.75, 0.3);
+    float3 bodyPos    = float3(0, 0, 2);
+    float3 bodySize   = float3(0.5, 1, 0.6);
     
     // Cube Person (Head)
-    float3 headPos    = float3(0, 0, 4);  // Sitting on top of body
-    float  headRadius = 0.4;
+    float3 headPos    = float3(0, -2, 2);  // Sitting on top of body
+    float  headRadius = 0.5;
     
     // Box Frame
-    float3 framePos   = float3(2.0, 1.0, 4); // To the side
-    float3 frameSize  = float3(0.8, 1.0, 0.8);
+    float3 framePos   = float3(2.0, 1.0, 2); // To the side
+    float3 frameSize  = float3(1, 1.0, 1);
     float  frameThick = 0.05;
 
     // --- 2. CALCULATE DISTANCES ---
@@ -122,22 +138,31 @@ float shadow(float3 ro, float3 rd, float mint, float maxt )
 kernel void default_shader(
     device    uchar4 *output [[buffer(0)]],
     constant uint2 &dims    [[buffer(1)]],
-    constant uint2 &mouse   [[buffer(2)]],
+    constant float *scene   [[buffer(2)]], // buffer 2 now holds 9 floats, PLEASE fix the type here
     uint2 gid [[thread_position_in_grid]])
 {
     if (gid.x >= dims.x || gid.y >= dims.y) return;
 
-    float2 mouse_pos = (float2(mouse) / float2(dims)) * 2.0 - 0.5;
-
     float2 uv = (float2(gid) / float2(dims)) * 2.0 - 1.0;
     uv.x *= float(dims.x) / float(dims.y);
 
+    float3 forward = normalize(float3(scene[3], scene[4], scene[5]));
+    float3 worldUp = float3(0.0, 1.0, 0.0);
+
+    float3 right = normalize(cross(forward, worldUp));
+    float3 up    = cross(right, forward);
+
+    float3 rd = normalize(
+        forward
+      + uv.x * right
+      + uv.y * up
+    );
+
     //*** Camera Direction and Origin ***//
-    float3 ro = float3(mouse_pos.x * 3, mouse_pos.y * 3, -3);
-    float3 rd = normalize(float3(uv, 1.5));
+    float3 ro = float3(scene[0], scene[1], scene[2]);
 
     float t = 0.0;
-    float maxt = 25;
+    float maxt = 100;
     float mint = 0.001;
     bool hit = false;
     float3 p;
@@ -156,14 +181,14 @@ kernel void default_shader(
     float3 color = float3(0.1, 0.2, 0.5);
     if (hit) {
         float3 normal = calcNormal(p);
-        float3 light_pos = float3(mouse_pos.x * 10, mouse_pos.y * 10, -2);
+        float3 light_pos = float3(scene[6], scene[7], scene[8]);
 
         float3 light_dir = normalize(light_pos - p);
         float dist_to_light = length(light_pos - p);
 
         float diff = max(dot(normal, light_dir), 0.0);
 
-        float shade = softshadow(p + normal * 0.01, light_dir, 0.01, dist_to_light, 32);
+        float shade = softshadow(p + normal * 0.001, light_dir, 0.001, dist_to_light, 32);
 
         color = float3(0.4) * diff + 0.5 * shade;
 

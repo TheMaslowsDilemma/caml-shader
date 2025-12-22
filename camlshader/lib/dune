@@ -1,5 +1,5 @@
 (library
  (name camlshader)
- (libraries metal tsdl))
+ (libraries metal tsdl owl))
 
 (include_subdirs unqualified)

@@ -8,7 +8,8 @@ type sdl_state = {
   ren : Sdl.renderer;
   txt : Sdl.texture;
   keys : keyboard_state;
-  mouse : mouse_state;
+  mouse_delta : mouse_state;
+  grab_mouse : bool;
 }
 
 (* Initializes SDL with video and event options: true on success *)
@@ -60,10 +61,17 @@ let resize_texture state w h =
 let build_keys n : keyboard_state = Hashtbl.create n
 let build_mouse () : mouse_state = ref (0, 0)
 
+let toggle_grab_mouse state = 
+
+  ignore (Sdl.set_window_grab state.win (not state.grab_mouse));
+  ignore (Sdl.set_relative_mouse_mode (not state.grab_mouse));
+  { state with grab_mouse = (not state.grab_mouse) }
+
+
 let build_default_sdl_state name w h =
   let keys = build_keys 16 in
   (* default to 16 keys ... *)
-  let mouse = build_mouse () in
+  let mouse_delta = build_mouse () in
   if not (start_sdl ()) then None
   else
     match build_window name w h with
@@ -83,7 +91,7 @@ let build_default_sdl_state name w h =
                 Sdl.destroy_window win;
                 Sdl.quit ();
                 None
-            | Some txt -> Some { win; ren; txt; keys; mouse }))
+            | Some txt -> Some { win; ren; txt; keys; mouse_delta; grab_mouse = false }))
 
 let destroy_sdl_state state =
   Sdl.destroy_texture state.txt;

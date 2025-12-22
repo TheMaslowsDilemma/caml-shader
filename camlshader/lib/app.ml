@@ -1,29 +1,22 @@
-type app_state = {
-  sdls : Sdl_utils.sdl_state;
-  gpus : Metal_utils.gpu_state;
-  shaders : Shader_utils.shader_library_state;
-  running : bool;
-}
+open App_utils
 
 let build_default_app () =
   let name = "caml shader" in
   let width = 800 in
   let height = 640 in
+  let scenes = Scene_utils.build_default_scene () in
   match Sdl_utils.build_default_sdl_state name width height with
   | None -> None
   | Some sdls -> (
-      let gpus = Metal_utils.build_gpu_state width height in
+      let gpus = Metal_utils.build_gpu_state width height scenes in
       match Shader_utils.build_default_library_state gpus.devc with
       | None ->
           Sdl_utils.destroy_sdl_state sdls;
-          (* todo: destroy_gpu_state *) None
-      | Some shaders -> Some { sdls; shaders; gpus; running = true })
+          None (* todo: destroy_gpu_state *) 
+      | Some shaders -> Some { scenes; sdls; shaders; gpus; running = true })
+;;
 
-let destroy_app state =
-  Sdl_utils.destroy_sdl_state state.sdls (* todo: destroy_gpu_state *)
-
-(*** event handlers ***)
-
+(*** Handle Events ***)
 let handle_event state event =
   let open Tsdl in
   let open Sdl.Event in
@@ -42,12 +35,10 @@ let handle_event state event =
       let sdls = Sdl_utils.handle_keyup state.sdls keycode in
       { state with sdls }
   | `Mouse_motion ->
-      let x = get event mouse_motion_x in
-      let y = get event mouse_motion_y in
-      state.sdls.mouse := (x, y);
-      (* i think this usage of ref is okay *)
-      let gpus = Metal_utils.update_mouse_buff state.gpus x y in
-      { state with gpus }
+      let dx = get event mouse_motion_xrel in
+      let dy = get event mouse_motion_yrel in
+      state.sdls.mouse_delta := (dx, dy);
+      state
   | `Window_event -> (
       let eid = get event window_event_id in
       match window_event_enum eid with
@@ -60,3 +51,16 @@ let handle_event state event =
               { state with gpus; sdls })
       | _ -> state)
   | _ -> state
+;;
+
+let apply_step state =
+  let updated_state = App_utils.(apply_mouse_actions (apply_keyboard_actions state default_actions)) in
+  let gpus = Metal_utils.update_scn_buff state.gpus state.scenes in
+  { updated_state with gpus }
+;;
+
+
+let destroy_app state =
+  Sdl_utils.destroy_sdl_state state.sdls (* todo: destroy_gpu_state *)
+;;
+
