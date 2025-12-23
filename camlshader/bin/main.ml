@@ -4,6 +4,7 @@ open Tsdl
 let event = Sdl.Event.create ()
 
 let rec loop state =
+  Unix.sleepf 0.0016;
   if not state.App_utils.running then ()
   else begin
     if Sdl.poll_event (Some event) then loop App.( apply_step (handle_event state event) )

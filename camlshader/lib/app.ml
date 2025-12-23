@@ -12,9 +12,8 @@ let build_default_app () =
       match Shader_utils.build_default_library_state gpus.devc with
       | None ->
           Sdl_utils.destroy_sdl_state sdls;
-          None (* todo: destroy_gpu_state *) 
+          None (* todo: destroy_gpu_state *)
       | Some shaders -> Some { scenes; sdls; shaders; gpus; running = true })
-;;
 
 (*** Handle Events ***)
 let handle_event state event =
@@ -51,16 +50,14 @@ let handle_event state event =
               { state with gpus; sdls })
       | _ -> state)
   | _ -> state
-;;
 
 let apply_step state =
-  let updated_state = App_utils.(apply_mouse_actions (apply_keyboard_actions state default_actions)) in
+  let updated_state =
+    App_utils.(
+      apply_mouse_actions (apply_keyboard_actions state default_actions))
+  in
   let gpus = Metal_utils.update_scn_buff state.gpus state.scenes in
   { updated_state with gpus }
-;;
-
 
 let destroy_app state =
   Sdl_utils.destroy_sdl_state state.sdls (* todo: destroy_gpu_state *)
-;;
-

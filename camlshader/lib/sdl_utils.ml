@@ -61,12 +61,10 @@ let resize_texture state w h =
 let build_keys n : keyboard_state = Hashtbl.create n
 let build_mouse () : mouse_state = ref (0, 0)
 
-let toggle_grab_mouse state = 
-
+let toggle_grab_mouse state =
   ignore (Sdl.set_window_grab state.win (not state.grab_mouse));
   ignore (Sdl.set_relative_mouse_mode (not state.grab_mouse));
-  { state with grab_mouse = (not state.grab_mouse) }
-
+  { state with grab_mouse = not state.grab_mouse }
 
 let build_default_sdl_state name w h =
   let keys = build_keys 16 in
@@ -91,7 +89,8 @@ let build_default_sdl_state name w h =
                 Sdl.destroy_window win;
                 Sdl.quit ();
                 None
-            | Some txt -> Some { win; ren; txt; keys; mouse_delta; grab_mouse = false }))
+            | Some txt ->
+                Some { win; ren; txt; keys; mouse_delta; grab_mouse = false }))
 
 let destroy_sdl_state state =
   Sdl.destroy_texture state.txt;
