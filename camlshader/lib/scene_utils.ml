@@ -37,21 +37,15 @@ let cross a b =
 let rotate_camera state dx dy =
   let sensitivity = 0.003 in
   let forward = state.camera_dir in
-  let right = normalize (cross forward scene_up_dir) in
-
-  (* Combine yaw and pitch into a single rotation vector r = (axis_y * angle_y) + (axis_x * angle_x) *)
-  let yaw = -.dx *. sensitivity in
+  let left = normalize (cross scene_up_dir forward) in
+  let yaw = dx *. sensitivity in
   let pitch = dy *. sensitivity in
-  let rot_vec = Mat.((scene_up_dir *$ yaw) + (right *$ pitch)) in
-
-  (* 3. Apply small-angle Rodrigues approximation: v' = v + (r x v) *)
-  let new_dir = Mat.(forward + cross rot_vec forward) |> normalize in
+  let rot_vec = Mat.((scene_up_dir *$ yaw) + (left *$ pitch)) in
+  let new_dir = Mat.(forward + cross forward rot_vec) |> normalize in
 
   { state with camera_dir = new_dir }
 
-(* Main translation function *)
-let translate_camera (dir : translation_dir) (speed : float)
-    (state : scene_state) =
+let translate_camera dir speed state =
   if dir = None then state
   else
     let forward = state.camera_dir in

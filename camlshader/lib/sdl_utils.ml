@@ -12,7 +12,7 @@ type sdl_state = {
   grab_mouse : bool;
 }
 
-(* Initializes SDL with video and event options: true on success *)
+(* Initializes SDL with video and event options *)
 let start_sdl () =
   match Sdl.init Sdl.Init.(video + events) with
   | Error (`Msg e) ->

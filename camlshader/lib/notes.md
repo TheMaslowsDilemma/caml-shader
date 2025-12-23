@@ -35,3 +35,27 @@ pursuing the most interesting idea, would mean becoming familiar
 with SDFs, understanding how they are composed, and consider if
 and how they are a function of a scene. then to find out how to
 build that function.
+
+**log: Dec 23, 2025**
+just to note about the previous ideas. there actually have been
+efforts by researchers to compose SDFs from meshes and point
+clouds. Notably from Facebook and NVIDIA.
+ - facebooks: https://github.com/facebookresearch/DeepSDF
+ - nvidias: https://github.com/nv-tlabs/nglod/tree/main
+these methods use neural networks to approximate a function. they
+seem slow but will have to look at it.
+
+between now and the last log, I have added the ability to input
+the camera direction and position into the shader buffer. this
+constrains the shader to operate within a 3D field, so maybe there
+should be a catagorization of this particular shader which operates
+in a 3D field with a camera. the controll logic for the camera is
+all handled outside the shader.
+additionally I added the light position to the shader buffer, although
+this could be expaneded to hold multiple light positions and
+could have better organization instead of just a float pointer `scene`
+
+the shader itself has been improved to have a repeating scene with
+soft shadows (taken from Inigo Quilez articles). there is some strange
+artifacts with rays not hitting objects and gaps and distorted buildings
+for example which still needs to be fixed.
