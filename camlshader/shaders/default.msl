@@ -31,64 +31,101 @@ float smin(float a, float b, float k)
 
 float smoothstep( float x )
 {
-  return x*x*x/(3.0*x*x-3.0*x+1.0);
+  return 0.5 - 0.5 * cos(1.7031250000 * x);
 }
 
 float hash(float2 p) {
-    return fract(sin(dot(p, p * float2(79.3, 4712))) * 43758.5453);
+    return fract(dot(p,p * 0.4609375000)) ;
 }
 
-float map(float3 p) {
-    float ground = -p.y; 
-    float2 cellSize = float2(10.0, 10.0);
-    float2 id = floor((p.xz + cellSize * 0.5) / cellSize);
-    float3 bP = p;
-    bP.xz = fmod(p.xz + cellSize, cellSize) - cellSize;
+float2 f2mod(float2 p, float2 k) {
+    return p - k * round(p / k + 0.5);
+}
 
-    // RANDOMNESS
-    float hVar = hash(id);
-    float height = 3.0 + hVar * 10.0; // Half-height of the building
-    float width = 1.5 + hash(id + 1.0) * 2.5;
-
-    // --- SAFETY ZONE ---
-    // This prevents buildings from spawning at the center (0,0) cell
-
-    // BUILDING POSITIONING
-    // To make it sit on the ground, Y center = height
-    float3 bPos = bP - float3(0, -height, 0);
-    float buildingBase = sdBox(bPos, float3(width, height, width));
-
-    // --- 4. DYNAMIC WINDOWS & DOORS ---
-    // Window repetition grid
-    float3 wP = bPos + float3(width, 0, 0);
-    float winSize = 0.3;
-    float winSpacing = width / 6;
+float sdf(float3 p, float2 id) {
+    float ground = -p.y;
+    // float2 spacing = float2(20, 20);
+    // float2 id = round(p.xz / spacing);
+    float3 base_pos = p;
+    //base_pos.xz = base_pos.xz - spacing * id;
     
-    // Repeat windows on the surface
-    wP.xy = fmod(wP.xy + winSpacing * 0.5, winSpacing) - winSpacing*0.5;
-    float windowCutout = sdBox(wP + float3(0, 0, width/2), float3(winSize / 2, winSize, 0.2));
+    float randomness = hash(id);
+    float height = 3.0 + 8 * randomness;
+    float width = 2 + randomness * 3;
 
-    // Door cutout (at the bottom of the building)
-    float3 dP = bPos - float3(0, -height + 0.8, -width);
-    float doorCutout = sdBox(dP, float3(0.6, 0.8, 0.5));
+    // Building Base Square //
+    float3 building_pos = float3(0, 0, 0);
+    float3 building_dims = float3(width, height, width);
 
-    // Combine building
-    float cityBuilding = max(buildingBase, -windowCutout);
-    cityBuilding = max(cityBuilding, -doorCutout);
 
-    return min(ground, cityBuilding);
+    // Building Trim //
+    float building_trim_thicc = 0.25;
+
+    // Windows //
+    // float window_height = 0.5 + randomness * 0.5;
+    // float window_width = 0.5 + randomness * 0.5;
+    // float3 p_rel_window = base_pos;
+    // p_mod_window.xy = fmod(base_pos.xy + win
+    // float windows = 
+
+    float building_dist = min(
+        sdBox(base_pos - building_pos, building_dims),
+        sdBoxFrame(base_pos - building_pos, building_dims + building_trim_thicc, building_trim_thicc)
+    );
+
+
+    // Door Cut Out Base Square //
+    float3 door_pos = float3(0, 0, width);
+    float door_dist = sdBox(base_pos - door_pos, float3(width/5, 2.5, width/5));
+
+    return min(ground, max(building_dist, -door_dist));
 }
 
 /**
-    https://iquilezles.org/articles/normalsSDF/
+    Taken from Fantastic Article:
+    https://iquilezles.org/articles/sdfrepetition/
 
-    NOTE: there are a few versions of the "calcNormal"
-    all are described in the article by Inigo Quilezles
-    1. hq: uses 6 calls to 
-    2. mid: uses 4 calls
-    3. low: uses 3 calls and assumes fp = 0
-    4. Tetrahedron Technique found below
+    slightly modified to be for 3d
+    basically you just have to check 
+    the sdf and your your neighbors,
+    keeping track of the 
+
+    p: position of point;
+    size: repetition dimension of SDF
+    spacing: distance btw repetitions
 **/
+float map(float3 p)
+{
+
+    float2 size = float2(10, 100);
+    float spacing = 25;
+
+    int i, j;
+    float2 id = round(p.xz / spacing);
+    float2 o = sign(p.xz - spacing * id);
+    float d = 1e20;
+    for (j = 0; j < 2; ++j)
+    for (i = 0; i < 2; ++i)
+    {
+        float2 rid = id + float2(i, j) * o;
+        rid = clamp(rid, -(size - 1.0) * 0.5, (size - 1.0) * 0.5);
+        float3 r = p;
+        r.xz = p.xz - spacing * rid;
+
+        // ----- "sdf" ----- //
+        d = min(d, sdf(r, rid));
+    }
+    return d;
+}
+    // https://iquilezles.org/articles/normalsSDF/
+
+    // NOTE: there are a few versions of the "calcNormal"
+    // all are described in the article by Inigo Quilezles
+    // 1. hq: uses 6 calls to 
+    // 2. mid: uses 4 calls
+    // 3. low: uses 3 calls and assumes fp = 0
+    // 4. Tetrahedron Technique found below
+
 float3 calcNormal(float3 p) {
     float h = 0.001;
     float2 k = float2(1, -1);
@@ -104,12 +141,12 @@ float softshadow(float3 ro, float3 rd, float mint, float maxt, float k )
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<256 && t<maxt; i++ )
+    for( int i=0; i < 256 && t<maxt; i++ )
     {
-        float h = map(ro + rd*t);
-        if( h<0.001 )
+        float h = map(ro + rd * t);
+        if( h < 0.001 )
             return 0.0;
-        res = min( res, k*h/t );
+        res = min( res, k * h / t );
         t += h;
     }
     return res;
@@ -120,7 +157,7 @@ float shadow(float3 ro, float3 rd, float mint, float maxt )
     float t = mint;
     for (int i = 0; i < 256 && t < maxt; i++)
     {
-        float h = map(ro + rd*t);
+        float h = map(ro + rd * t);
         if (h < 0.001)
             return 0.0;
         t += h;
@@ -130,9 +167,9 @@ float shadow(float3 ro, float3 rd, float mint, float maxt )
 
 
 kernel void default_shader(
-    device    uchar4 *output [[buffer(0)]],
-    constant uint2 &dims    [[buffer(1)]],
-    constant float *scene   [[buffer(2)]], // buffer 2 now holds 9 floats, PLEASE fix the type here
+    device    uchar4 *output  [[buffer(0)]],
+    constant  uint2 &dims     [[buffer(1)]],
+    constant  float *scene    [[buffer(2)]], /* TODO: structure this better */
     uint2 gid [[thread_position_in_grid]])
 {
     if (gid.x >= dims.x || gid.y >= dims.y) return;
@@ -157,13 +194,13 @@ kernel void default_shader(
 
     float t = 0.0;
     float maxt = 200;
-    float mint = 0.01;
+    float mint = 0.001;
     bool hit = false;
     float3 p;
 
     for (int i = 0; i < 100; i++) {
         p = ro + rd * t;
-        float d = map(p) * 0.92;
+        float d = map(p);
         if (d < mint) {
             hit = true;
             break;
@@ -182,7 +219,7 @@ kernel void default_shader(
 
         float diff = max(dot(normal, light_dir), 0.0);
 
-        float shade = softshadow(p + normal * 0.001, light_dir, 0.001, dist_to_light, 32);
+        float shade = shadow(p + normal * 0.01, light_dir, 0.01, dist_to_light);//, 32);
 
         color = float3(0.05) + float3(0.7) * diff + 0.25 * shade;
 
