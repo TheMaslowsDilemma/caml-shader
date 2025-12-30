@@ -22,63 +22,80 @@ float sdBox(float3 p, float3 b) {
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-float smin(float a, float b, float k)
+float sdTriPrism(float3 p, float2 h )
 {
-    k *= log(2.0);
-    float x = b-a;
-    return a + x / ( 1.0 - exp2(x/k));
+  float3 q = abs(p);
+  return max(q.z-h.y,max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5);
+}
+
+float smin( float a, float b, float k )
+{
+    k *= 2.0;
+    float x = b - a;
+    return 0.5 * (a + b - sqrt( x * x + k * k));
 }
 
 float smoothstep( float x )
 {
-  return 0.5 - 0.5 * cos(1.7031250000 * x);
+  return x * x * (2.0 - x * x);
 }
 
 float hash(float2 p) {
-    return fract(dot(p,p * 0.4609375000)) ;
-}
-
-float2 f2mod(float2 p, float2 k) {
-    return p - k * round(p / k + 0.5);
+    return fract(dot(p + 0.4609375000, p * 0.4609375000)) ;
 }
 
 float sdf(float3 p, float2 id) {
-    float ground = -p.y;
-    // float2 spacing = float2(20, 20);
-    // float2 id = round(p.xz / spacing);
-    float3 base_pos = p;
-    //base_pos.xz = base_pos.xz - spacing * id;
-    
     float randomness = hash(id);
-    float height = 3.0 + 8 * randomness;
-    float width = 2 + randomness * 3;
+    float randomness2 = hash(id * 1.7031250000);
+    float height = 3.0 + 8.0 * randomness;
+    float width = 2.0 + randomness * 3.0;
 
-    // Building Base Square //
-    float3 building_pos = float3(0, 0, 0);
+    float ground = -p.y;
+
+    // Building Base //
+    float3 building_pos = float3(randomness2 * 10, 0, randomness * 10);
     float3 building_dims = float3(width, height, width);
 
+    // Roof //
+    float3 roof_pos = building_pos + float3(0, height * 1.25, 0); 
+    float roof_dist = sdTriPrism(p * float3(1, -1, 1) - roof_pos, float2(width, width));
+    
+    // Chimney //
+    float3 chimney_pos = roof_pos + float3(width * 0.5, 0, width);
+    float chimney_dist = sdBox(p - chimney_pos, float3(0.4, 3, 0.4));
+    float roof_and_chimney = min(roof_dist, chimney_dist);
 
-    // Building Trim //
+    // Building Trim /
     float building_trim_thicc = 0.25;
 
-    // Windows //
-    // float window_height = 0.5 + randomness * 0.5;
-    // float window_width = 0.5 + randomness * 0.5;
-    // float3 p_rel_window = base_pos;
-    // p_mod_window.xy = fmod(base_pos.xy + win
-    // float windows = 
-
+    // Building Distance Combinations //
     float building_dist = min(
-        sdBox(base_pos - building_pos, building_dims),
-        sdBoxFrame(base_pos - building_pos, building_dims + building_trim_thicc, building_trim_thicc)
+        sdBox(p - building_pos, building_dims),
+        sdBoxFrame(p - building_pos, building_dims + building_trim_thicc, building_trim_thicc)
     );
+    building_dist = smin(building_dist, roof_and_chimney, 0.05);
 
+    // Windows :: todo: fix //
+    float window_h = 0.5 + randomness * 0.5;
+    float window_w = 0.5 + randomness * 0.5;
+    
+    // Use abs() on X and Z to mirror one window definition to all 4 sides
+    float3 p_abs = float3(abs(p.x), p.y, abs(p.z));
+    
+    float3 window_pos = building_pos + float3(width / 2, -height / 2, width / 2);
+    float3 window_dims = float3(10, window_h, window_w);
 
-    // Door Cut Out Base Square //
-    float3 door_pos = float3(0, 0, width);
-    float door_dist = sdBox(base_pos - door_pos, float3(width/5, 2.5, width/5));
+    float win_x = sdBox(p_abs - window_pos, window_dims);
+    float win_z = sdBox(p_abs - window_pos, window_dims.zyx);
+    float window_dist = min(win_x, win_z);
 
-    return min(ground, max(building_dist, -door_dist));
+    // Door Cut Out //
+    float3 door_pos = float3(0, height - 1.5, width);
+    float door_dist = sdBox(p - door_pos, float3(width/5.0, 1.5, width/5.0));
+
+    // Final Union and Subtraction
+    // Subtract both the door and the windows from the building structure
+    return min(ground, max(building_dist, -min(door_dist, window_dist)));
 }
 
 /**
@@ -97,7 +114,7 @@ float sdf(float3 p, float2 id) {
 float map(float3 p)
 {
 
-    float2 size = float2(10, 100);
+    float2 size = float2(10, 10);
     float spacing = 25;
 
     int i, j;
@@ -213,13 +230,11 @@ kernel void default_shader(
     if (hit) {
         float3 normal = calcNormal(p);
         float3 light_pos = float3(scene[6], scene[7], scene[8]);
-
         float3 light_dir = normalize(light_pos - p);
+
         float dist_to_light = length(light_pos - p);
-
         float diff = max(dot(normal, light_dir), 0.0);
-
-        float shade = shadow(p + normal * 0.01, light_dir, 0.01, dist_to_light);//, 32);
+        float shade = softshadow(p + normal * 0.01, light_dir, 0.01, dist_to_light, 32);
 
         color = float3(0.05) + float3(0.7) * diff + 0.25 * shade;
 

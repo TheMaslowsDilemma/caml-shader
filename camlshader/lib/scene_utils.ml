@@ -13,7 +13,7 @@ let scene_up_dir = vec_of_3 0. 1. 0.
 
 let build_default_scene () =
   {
-    camera_pos = vec_of_3 0. 0. (-4.);
+    camera_pos = vec_of_3 0. (-20.) 0.;
     camera_dir = vec_of_3 0. 0. 1.;
     light_pos = vec_of_3 (-50.) (-50.) 50.;
   }

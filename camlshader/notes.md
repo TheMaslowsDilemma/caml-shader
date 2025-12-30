@@ -59,3 +59,12 @@ the shader itself has been improved to have a repeating scene with
 soft shadows (taken from Inigo Quilez articles). there is some strange
 artifacts with rays not hitting objects and gaps and distorted buildings
 for example which still needs to be fixed.
+
+
+**log: Dec 24, 2025**
+after reading Inigo Quilez article on repeating sdfs, the shader correctly
+repeates the houses. I added a roof and a chimminy. I would like to next,
+do some machine learning. It need to be improved before going to a ML
+
+**log: Dec 29, 2025**
+
