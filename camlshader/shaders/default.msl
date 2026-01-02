@@ -49,7 +49,6 @@ float sdf(float3 p, float2 id) {
     float randomness2 = hash(id * 1.7031250000);
     float height = 3.0 + 8.0 * randomness;
     float width = 2.0 + randomness * 3.0;
-
     float ground = -p.y;
 
     // Building Base //
@@ -75,27 +74,7 @@ float sdf(float3 p, float2 id) {
     );
     building_dist = smin(building_dist, roof_and_chimney, 0.05);
 
-    // Windows :: todo: fix //
-    float window_h = 0.5 + randomness * 0.5;
-    float window_w = 0.5 + randomness * 0.5;
-    
-    // Use abs() on X and Z to mirror one window definition to all 4 sides
-    float3 p_abs = float3(abs(p.x), p.y, abs(p.z));
-    
-    float3 window_pos = building_pos + float3(width / 2, -height / 2, width / 2);
-    float3 window_dims = float3(10, window_h, window_w);
-
-    float win_x = sdBox(p_abs - window_pos, window_dims);
-    float win_z = sdBox(p_abs - window_pos, window_dims.zyx);
-    float window_dist = min(win_x, win_z);
-
-    // Door Cut Out //
-    float3 door_pos = float3(0, height - 1.5, width);
-    float door_dist = sdBox(p - door_pos, float3(width/5.0, 1.5, width/5.0));
-
-    // Final Union and Subtraction
-    // Subtract both the door and the windows from the building structure
-    return min(ground, max(building_dist, -min(door_dist, window_dist)));
+    return min(ground, building_dist);
 }
 
 /**
@@ -190,9 +169,12 @@ kernel void default_shader(
     uint2 gid [[thread_position_in_grid]])
 {
     if (gid.x >= dims.x || gid.y >= dims.y) return;
+    uint index = gid.y * dims.x + gid.x;
 
     float2 uv = (float2(gid) / float2(dims)) * 2.0 - 1.0;
     uv.x *= float(dims.x) / float(dims.y);
+
+    //if ( fract(gid.x * hash(float2(gid)) + gid.y) > 0.75) { output[index] = output[index + 1]; return; }
 
     float3 forward = normalize(float3(scene[3], scene[4], scene[5]));
     float3 worldUp = float3(0.0, 1.0, 0.0);
@@ -240,6 +222,5 @@ kernel void default_shader(
 
     }
 
-    uint index = gid.y * dims.x + gid.x;
     output[index] = uchar4(uchar3(clamp(color, 0.0, 1.0) * 255), 255);
 }

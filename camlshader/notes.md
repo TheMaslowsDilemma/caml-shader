@@ -67,4 +67,5 @@ repeates the houses. I added a roof and a chimminy. I would like to next,
 do some machine learning. It need to be improved before going to a ML
 
 **log: Dec 29, 2025**
-
+the next task is to use bounding boxes to optimize performance
+of the shader. Possibly use KD Trees / Octrees ... 
