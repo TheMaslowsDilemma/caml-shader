@@ -1,6 +1,6 @@
 # Caml Shader
 
-Caml Shader is an experimental SDF ray marching environment written in OCaml, with shaders implemented in Metal Shader Language. The project renders signed distance function scenes in real-time, compiling Metal shaders at runtime and displaying them through SDL.
+Caml Shader is an experimental SDF ray marching environment written in OCaml, with shaders implemented in Metal Shader Language. The project renders signed distance function scenes in real-time, compiling Metal shaders at runtime and displaying them through SDL. It requires a Mac.
 
 ## Overview
 
@@ -11,10 +11,14 @@ Shaders are stored in the `camlshader/shaders` directory and compiled dynamicall
 ## Running
 
 The project uses Dune as its build system. To compile and run:
+Controls are WASD. Press E to toggle trapping your mouse in the screen.
 
 ```
+cd camlshader
 dune exec camlshader
 ```
+
+<img width="1459" height="790" alt="Screenshot 2026-01-14 at 11 21 18 AM" src="https://github.com/user-attachments/assets/7af3f4f1-46ac-4cc4-adde-bc08aefcc9f5" />
 
 ## Dependencies
 
@@ -34,8 +38,8 @@ One area of ongoing interest is the dynamic composition of signed distance funct
 
 The shader has undergone several iterations to achieve correct SDF repetition for the village scene, with soft shadows implemented following Quilez's articles. Some visual artifacts remain around ray-surface intersections and building geometry that need attention.
 
-Future work includes implementing bounding volume hierarchies such as KD-trees or octrees to optimize ray marching performance, as well as potential integration with linear algebra visualization for rendering vectors and matrices. There is also interest in exploring shader composition, where multiple shaders handling different dimensional data could be layered together.
+Future work includes implementing bounding volume hierarchies such as KD-trees or octrees to optimize ray marching performance, as well as potential integration with linear algebra visualization for rendering vectors and matrices. There is also interest in exploring shader composition, where multiple shaders handling different dimensional data could be layered together. 
 
 ## References
 
-The implementation draws from Inigo Quilez's extensive documentation on signed distance functions and ray marching techniques. The neural SDF research referenced during development can be found at the DeepSDF and NGLOD repositories on GitHub.
+The implementation draws from [Inigo Quilez's](https://iquilezles.org/articles/) extensive documentation on signed distance functions and ray marching techniques. The neural SDF research referenced during development can be found at the [DeepSDF](https://github.com/facebookresearch/DeepSDF) and [NGLOD](https://github.com/nv-tlabs/nglod/tree/main) repositories on GitHub.
