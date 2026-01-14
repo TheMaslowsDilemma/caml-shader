@@ -10,8 +10,11 @@ Shaders are stored in the `camlshader/shaders` directory and compiled dynamicall
 
 ## Running
 
-The project uses Dune as its build system. To compile and run:
+The project uses Dune as its build system.
+
 Controls are WASD. Press E to toggle trapping your mouse in the screen.
+
+To compile and run:
 
 ```
 cd camlshader
